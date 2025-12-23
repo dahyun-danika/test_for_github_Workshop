@@ -1,0 +1,399 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>학생 네트워크 시각화</title>
+  <style>
+    html, body { height: 100%; margin: 0; overflow: hidden; font-family: sans-serif; }
+    #controls { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; }
+    button { margin: 4px; }
+    .node { stroke: #fff; stroke-width: 1.5px; cursor: pointer; }
+    .link { stroke-opacity: 0.4; stroke-width: 2px; fill: none; }
+    .link.highlight { stroke-opacity: 1; stroke-width: 4px; }
+    .highlight-node { stroke: black; stroke-width: 3px; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button onclick="toggleLinks('friend')">친구관계 보기</button>
+    <button onclick="toggleLinks('desired')">친하고 싶은 친구 보기</button>
+    <button onclick="toggleLinks('study')">함께 공부하는 친구 보기</button>
+    <button onclick="toggleLinks('collab')">함께 협력하는 친구 보기</button>
+    <button onclick="toggleLinks('help')">도움을 요청하는 친구관계 보기</button>
+  </div>
+
+  <script>
+const students = [
+  { id: "강봄", gender: 1 },
+  { id: "도지율", gender: 0 },
+  { id: "박병윤", gender: 0 },
+  { id: "신해린", gender: 1 },
+  { id: "양래오", gender: 0 },
+  { id: "윤희재", gender: 0 },
+  { id: "지인규", gender: 0 },
+  { id: "지호경", gender: 0 },
+  { id: "최하윤", gender: 1 },
+  { id: "한재인", gender: 1 },
+  { id: "한태주", gender: 0 },
+  { id: "강승윤", gender: 0 },
+];
+const linkTypes = {
+friend: [
+    { source: "강봄", target: "도지율", type: "friend", bidirectional: false },
+    { source: "강봄", target: "신해린", type: "friend", bidirectional: false },
+    { source: "강봄", target: "양래오", type: "friend", bidirectional: false },
+    { source: "강봄", target: "윤희재", type: "friend", bidirectional: false },
+    { source: "강봄", target: "지인규", type: "friend", bidirectional: false },
+    { source: "강봄", target: "지호경", type: "friend", bidirectional: true },
+    { source: "강봄", target: "최하윤", type: "friend", bidirectional: true },
+    { source: "강봄", target: "한재인", type: "friend", bidirectional: true },
+    { source: "강봄", target: "한태주", type: "friend", bidirectional: false },
+    { source: "도지율", target: "양래오", type: "friend", bidirectional: false },
+    { source: "도지율", target: "윤희재", type: "friend", bidirectional: false },
+    { source: "도지율", target: "지인규", type: "friend", bidirectional: false },
+    { source: "도지율", target: "지호경", type: "friend", bidirectional: true },
+    { source: "도지율", target: "한태주", type: "friend", bidirectional: true },
+    { source: "박병윤", target: "강봄", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "도지율", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "신해린", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "양래오", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "윤희재", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "지인규", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "지호경", type: "friend", bidirectional: true },
+    { source: "박병윤", target: "최하윤", type: "friend", bidirectional: true },
+    { source: "박병윤", target: "한재인", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "한태주", type: "friend", bidirectional: false },
+    { source: "박병윤", target: "강승윤", type: "friend", bidirectional: false },
+    { source: "신해린", target: "최하윤", type: "friend", bidirectional: true },
+    { source: "양래오", target: "윤희재", type: "friend", bidirectional: true },
+    { source: "양래오", target: "지호경", type: "friend", bidirectional: true },
+    { source: "윤희재", target: "한태주", type: "friend", bidirectional: true },
+    { source: "지인규", target: "지호경", type: "friend", bidirectional: true },
+    { source: "지호경", target: "신해린", type: "friend", bidirectional: false },
+    { source: "지호경", target: "윤희재", type: "friend", bidirectional: false },
+    { source: "지호경", target: "최하윤", type: "friend", bidirectional: true },
+    { source: "지호경", target: "한재인", type: "friend", bidirectional: false },
+    { source: "지호경", target: "한태주", type: "friend", bidirectional: true },
+    { source: "지호경", target: "강승윤", type: "friend", bidirectional: true },
+    { source: "최하윤", target: "지인규", type: "friend", bidirectional: false },
+    { source: "최하윤", target: "한재인", type: "friend", bidirectional: true },
+    { source: "한재인", target: "신해린", type: "friend", bidirectional: false },
+    { source: "한재인", target: "윤희재", type: "friend", bidirectional: false },
+  ],
+desired: [
+    { source: "강봄", target: "박병윤", type: "desired", bidirectional: true },
+    { source: "강봄", target: "강승윤", type: "desired", bidirectional: true },
+    { source: "도지율", target: "박병윤", type: "desired", bidirectional: true },
+    { source: "도지율", target: "신해린", type: "desired", bidirectional: false },
+    { source: "도지율", target: "양래오", type: "desired", bidirectional: true },
+    { source: "도지율", target: "윤희재", type: "desired", bidirectional: true },
+    { source: "도지율", target: "지인규", type: "desired", bidirectional: false },
+    { source: "도지율", target: "지호경", type: "desired", bidirectional: true },
+    { source: "도지율", target: "최하윤", type: "desired", bidirectional: true },
+    { source: "도지율", target: "한재인", type: "desired", bidirectional: false },
+    { source: "도지율", target: "한태주", type: "desired", bidirectional: false },
+    { source: "도지율", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "박병윤", target: "신해린", type: "desired", bidirectional: false },
+    { source: "박병윤", target: "양래오", type: "desired", bidirectional: true },
+    { source: "박병윤", target: "윤희재", type: "desired", bidirectional: true },
+    { source: "박병윤", target: "지인규", type: "desired", bidirectional: true },
+    { source: "박병윤", target: "지호경", type: "desired", bidirectional: true },
+    { source: "박병윤", target: "최하윤", type: "desired", bidirectional: false },
+    { source: "박병윤", target: "한재인", type: "desired", bidirectional: true },
+    { source: "박병윤", target: "한태주", type: "desired", bidirectional: false },
+    { source: "박병윤", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "신해린", target: "강봄", type: "desired", bidirectional: false },
+    { source: "신해린", target: "지인규", type: "desired", bidirectional: false },
+    { source: "신해린", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "양래오", target: "강봄", type: "desired", bidirectional: false },
+    { source: "양래오", target: "신해린", type: "desired", bidirectional: false },
+    { source: "양래오", target: "윤희재", type: "desired", bidirectional: true },
+    { source: "양래오", target: "지인규", type: "desired", bidirectional: false },
+    { source: "양래오", target: "지호경", type: "desired", bidirectional: true },
+    { source: "양래오", target: "최하윤", type: "desired", bidirectional: true },
+    { source: "양래오", target: "한재인", type: "desired", bidirectional: false },
+    { source: "양래오", target: "한태주", type: "desired", bidirectional: true },
+    { source: "양래오", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "강봄", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "신해린", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "지인규", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "지호경", type: "desired", bidirectional: true },
+    { source: "윤희재", target: "최하윤", type: "desired", bidirectional: true },
+    { source: "윤희재", target: "한재인", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "한태주", type: "desired", bidirectional: false },
+    { source: "윤희재", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "지인규", target: "지호경", type: "desired", bidirectional: true },
+    { source: "지인규", target: "최하윤", type: "desired", bidirectional: false },
+    { source: "지인규", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "지호경", target: "강봄", type: "desired", bidirectional: false },
+    { source: "지호경", target: "신해린", type: "desired", bidirectional: false },
+    { source: "지호경", target: "최하윤", type: "desired", bidirectional: false },
+    { source: "지호경", target: "한재인", type: "desired", bidirectional: true },
+    { source: "지호경", target: "한태주", type: "desired", bidirectional: false },
+    { source: "지호경", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "최하윤", target: "한태주", type: "desired", bidirectional: false },
+    { source: "최하윤", target: "강승윤", type: "desired", bidirectional: false },
+    { source: "한태주", target: "지인규", type: "desired", bidirectional: false },
+    { source: "한태주", target: "강승윤", type: "desired", bidirectional: false },
+  ],
+study: [
+    { source: "강봄", target: "신해린", type: "study", bidirectional: true },
+    { source: "강봄", target: "지인규", type: "study", bidirectional: true },
+    { source: "강봄", target: "지호경", type: "study", bidirectional: true },
+    { source: "강봄", target: "최하윤", type: "study", bidirectional: false },
+    { source: "강봄", target: "한재인", type: "study", bidirectional: true },
+    { source: "도지율", target: "양래오", type: "study", bidirectional: true },
+    { source: "도지율", target: "윤희재", type: "study", bidirectional: true },
+    { source: "도지율", target: "지인규", type: "study", bidirectional: false },
+    { source: "도지율", target: "지호경", type: "study", bidirectional: true },
+    { source: "도지율", target: "한태주", type: "study", bidirectional: false },
+    { source: "신해린", target: "지인규", type: "study", bidirectional: true },
+    { source: "양래오", target: "신해린", type: "study", bidirectional: false },
+    { source: "양래오", target: "윤희재", type: "study", bidirectional: true },
+    { source: "양래오", target: "지인규", type: "study", bidirectional: true },
+    { source: "양래오", target: "지호경", type: "study", bidirectional: true },
+    { source: "윤희재", target: "강봄", type: "study", bidirectional: false },
+    { source: "윤희재", target: "신해린", type: "study", bidirectional: false },
+    { source: "윤희재", target: "지인규", type: "study", bidirectional: true },
+    { source: "윤희재", target: "지호경", type: "study", bidirectional: true },
+    { source: "윤희재", target: "한재인", type: "study", bidirectional: false },
+    { source: "윤희재", target: "한태주", type: "study", bidirectional: true },
+    { source: "지인규", target: "지호경", type: "study", bidirectional: true },
+    { source: "지인규", target: "한재인", type: "study", bidirectional: true },
+    { source: "지인규", target: "한태주", type: "study", bidirectional: true },
+    { source: "지호경", target: "박병윤", type: "study", bidirectional: false },
+    { source: "지호경", target: "신해린", type: "study", bidirectional: false },
+    { source: "지호경", target: "최하윤", type: "study", bidirectional: true },
+    { source: "지호경", target: "한재인", type: "study", bidirectional: true },
+    { source: "지호경", target: "한태주", type: "study", bidirectional: true },
+    { source: "지호경", target: "강승윤", type: "study", bidirectional: false },
+    { source: "최하윤", target: "신해린", type: "study", bidirectional: false },
+    { source: "최하윤", target: "지인규", type: "study", bidirectional: false },
+    { source: "최하윤", target: "한재인", type: "study", bidirectional: true },
+    { source: "최하윤", target: "한태주", type: "study", bidirectional: false },
+    { source: "강승윤", target: "지인규", type: "study", bidirectional: false },
+  ],
+collab: [
+    { source: "강봄", target: "도지율", type: "collab", bidirectional: false },
+    { source: "강봄", target: "박병윤", type: "collab", bidirectional: true },
+    { source: "강봄", target: "신해린", type: "collab", bidirectional: false },
+    { source: "강봄", target: "양래오", type: "collab", bidirectional: false },
+    { source: "강봄", target: "윤희재", type: "collab", bidirectional: true },
+    { source: "강봄", target: "지인규", type: "collab", bidirectional: true },
+    { source: "강봄", target: "지호경", type: "collab", bidirectional: true },
+    { source: "강봄", target: "최하윤", type: "collab", bidirectional: false },
+    { source: "강봄", target: "한재인", type: "collab", bidirectional: true },
+    { source: "강봄", target: "한태주", type: "collab", bidirectional: false },
+    { source: "강봄", target: "강승윤", type: "collab", bidirectional: true },
+    { source: "도지율", target: "지인규", type: "collab", bidirectional: true },
+    { source: "도지율", target: "지호경", type: "collab", bidirectional: true },
+    { source: "박병윤", target: "도지율", type: "collab", bidirectional: false },
+    { source: "박병윤", target: "신해린", type: "collab", bidirectional: false },
+    { source: "박병윤", target: "양래오", type: "collab", bidirectional: false },
+    { source: "박병윤", target: "윤희재", type: "collab", bidirectional: true },
+    { source: "박병윤", target: "지인규", type: "collab", bidirectional: true },
+    { source: "박병윤", target: "지호경", type: "collab", bidirectional: true },
+    { source: "박병윤", target: "최하윤", type: "collab", bidirectional: false },
+    { source: "박병윤", target: "한재인", type: "collab", bidirectional: false },
+    { source: "박병윤", target: "한태주", type: "collab", bidirectional: false },
+    { source: "신해린", target: "양래오", type: "collab", bidirectional: false },
+    { source: "양래오", target: "윤희재", type: "collab", bidirectional: true },
+    { source: "양래오", target: "강승윤", type: "collab", bidirectional: true },
+    { source: "윤희재", target: "도지율", type: "collab", bidirectional: false },
+    { source: "윤희재", target: "신해린", type: "collab", bidirectional: false },
+    { source: "윤희재", target: "지인규", type: "collab", bidirectional: true },
+    { source: "윤희재", target: "지호경", type: "collab", bidirectional: true },
+    { source: "윤희재", target: "최하윤", type: "collab", bidirectional: false },
+    { source: "윤희재", target: "한재인", type: "collab", bidirectional: false },
+    { source: "윤희재", target: "한태주", type: "collab", bidirectional: true },
+    { source: "윤희재", target: "강승윤", type: "collab", bidirectional: false },
+    { source: "지인규", target: "신해린", type: "collab", bidirectional: false },
+    { source: "지인규", target: "양래오", type: "collab", bidirectional: false },
+    { source: "지인규", target: "지호경", type: "collab", bidirectional: true },
+    { source: "지인규", target: "최하윤", type: "collab", bidirectional: true },
+    { source: "지인규", target: "한재인", type: "collab", bidirectional: true },
+    { source: "지인규", target: "한태주", type: "collab", bidirectional: false },
+    { source: "지인규", target: "강승윤", type: "collab", bidirectional: true },
+    { source: "지호경", target: "신해린", type: "collab", bidirectional: false },
+    { source: "지호경", target: "양래오", type: "collab", bidirectional: false },
+    { source: "지호경", target: "최하윤", type: "collab", bidirectional: true },
+    { source: "지호경", target: "한재인", type: "collab", bidirectional: false },
+    { source: "지호경", target: "한태주", type: "collab", bidirectional: true },
+    { source: "지호경", target: "강승윤", type: "collab", bidirectional: true },
+    { source: "최하윤", target: "한태주", type: "collab", bidirectional: false },
+    { source: "한재인", target: "최하윤", type: "collab", bidirectional: false },
+    { source: "한태주", target: "도지율", type: "collab", bidirectional: false },
+    { source: "강승윤", target: "도지율", type: "collab", bidirectional: false },
+    { source: "강승윤", target: "박병윤", type: "collab", bidirectional: false },
+    { source: "강승윤", target: "신해린", type: "collab", bidirectional: false },
+    { source: "강승윤", target: "최하윤", type: "collab", bidirectional: false },
+    { source: "강승윤", target: "한태주", type: "collab", bidirectional: false },
+  ],
+help: [
+    { source: "도지율", target: "양래오", type: "help", bidirectional: false },
+    { source: "도지율", target: "윤희재", type: "help", bidirectional: true },
+    { source: "신해린", target: "강봄", type: "help", bidirectional: false },
+    { source: "신해린", target: "양래오", type: "help", bidirectional: false },
+    { source: "신해린", target: "한태주", type: "help", bidirectional: true },
+    { source: "윤희재", target: "강봄", type: "help", bidirectional: false },
+    { source: "윤희재", target: "지인규", type: "help", bidirectional: true },
+    { source: "윤희재", target: "지호경", type: "help", bidirectional: true },
+    { source: "지인규", target: "강봄", type: "help", bidirectional: false },
+    { source: "지인규", target: "양래오", type: "help", bidirectional: false },
+    { source: "지인규", target: "지호경", type: "help", bidirectional: true },
+    { source: "지인규", target: "한태주", type: "help", bidirectional: false },
+    { source: "지호경", target: "강봄", type: "help", bidirectional: false },
+    { source: "지호경", target: "도지율", type: "help", bidirectional: false },
+    { source: "지호경", target: "박병윤", type: "help", bidirectional: false },
+    { source: "지호경", target: "신해린", type: "help", bidirectional: false },
+    { source: "지호경", target: "양래오", type: "help", bidirectional: false },
+    { source: "지호경", target: "최하윤", type: "help", bidirectional: false },
+    { source: "지호경", target: "한재인", type: "help", bidirectional: true },
+    { source: "지호경", target: "한태주", type: "help", bidirectional: true },
+    { source: "지호경", target: "강승윤", type: "help", bidirectional: false },
+    { source: "최하윤", target: "도지율", type: "help", bidirectional: false },
+    { source: "최하윤", target: "박병윤", type: "help", bidirectional: false },
+    { source: "최하윤", target: "한태주", type: "help", bidirectional: false },
+    { source: "한재인", target: "강봄", type: "help", bidirectional: false },
+    { source: "한재인", target: "도지율", type: "help", bidirectional: false },
+    { source: "한재인", target: "지인규", type: "help", bidirectional: false },
+  ]
+};
+  // 여기에 students 와 linkTypes 삽입
+  </script>
+
+  <svg width="0" height="0">
+    <defs>
+      <marker id="arrow-friend" viewBox="0 -5 10 10" refX="22" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#000000" />
+      </marker>
+      <marker id="arrow-desired" viewBox="0 -5 10 10" refX="22" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#5DADEC" />
+      </marker>
+      <marker id="arrow-study" viewBox="0 -5 10 10" refX="22" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#32CD32" />
+      </marker>
+      <marker id="arrow-collab" viewBox="0 -5 10 10" refX="22" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#8A2BE2" />
+      </marker>
+      <marker id="arrow-help" viewBox="0 -5 10 10" refX="22" refY="0" markerWidth="10" markerHeight="10" orient="auto">
+        <path d="M0,-5L10,0L0,5" fill="#FF0000" />
+      </marker>
+    </defs>
+  </svg>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script>
+    let simulation, svg, g, linkGroup, nodeGroup, labelGroup;
+    const colorMap = {
+      friend: "#000000", desired: "#5DADEC", study: "#32CD32", collab: "#8A2BE2", help: "#FF0000"
+    };
+    const markerMap = {
+      friend: "arrow-friend", desired: "arrow-desired", study: "arrow-study",
+      collab: "arrow-collab", help: "arrow-help"
+    };
+    const activeTypes = { friend: false, desired: false, study: false, collab: false, help: false };
+
+    function drawNetwork() {
+      d3.select("svg.main").remove();
+      svg = d3.select("body").append("svg")
+        .attr("class", "main")
+        .attr("width", window.innerWidth)
+        .attr("height", window.innerHeight)
+        .call(d3.zoom().on("zoom", function (event) {
+          g.attr("transform", event.transform);
+        }))
+        .on("dblclick.zoom", null);
+
+      g = svg.append("g");
+      linkGroup = g.append("g");
+      nodeGroup = g.append("g");
+      labelGroup = g.append("g");
+
+      const allLinks = Object.entries(linkTypes).flatMap(([type, links]) =>
+        links.flatMap(d => {
+          const base = {
+            type: type,
+            stroke: colorMap[type],
+            marker: markerMap[type]
+          };
+          if (d.bidirectional) {
+            return [
+              { ...d, ...base }, // source -> target
+              { source: d.target, target: d.source, ...base } // target -> source
+            ];
+          } else {
+            return [{ ...d, ...base }];
+          }
+        })
+      );
+
+      simulation = d3.forceSimulation(students)
+        .force("link", d3.forceLink().id(d => d.id).distance(200).links(allLinks))
+        .force("charge", d3.forceManyBody().strength(-600))
+        .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+        .force("collide", d3.forceCollide(60))
+        .on("end", () => {
+          students.forEach(d => {
+            d.fx = d.x;
+            d.fy = d.y;
+          });
+        });
+
+      const link = linkGroup.selectAll("line")
+        .data(allLinks)
+        .enter().append("line")
+        .attr("class", d => `link ${d.type}`)
+        .attr("stroke", d => d.stroke)
+        .attr("marker-end", d => `url(#${d.marker})`)
+        .style("display", d => activeTypes[d.type] ? "inline" : "none");
+
+      const node = nodeGroup.selectAll("circle")
+        .data(students)
+        .enter().append("circle")
+        .attr("r", 20)
+        .attr("fill", d => d.gender === 1 ? "pink" : d.gender === 0 ? "skyblue" : "gray")
+        .attr("class", "node")
+        .call(d3.drag()
+          .on("start", event => simulation.alphaTarget(0.3).restart())
+          .on("drag", (event, d) => { d.fx = event.x; d.fy = event.y; })
+          .on("end", (event, d) => { d.fx = event.x; d.fy = event.y; }))
+        .on("dblclick", function(event, d) {
+          node.classed("highlight-node", n => n === d);
+          link.classed("highlight", l => l.source.id === d.id || l.target.id === d.id);
+        });
+
+      const label = labelGroup.selectAll("text")
+        .data(students)
+        .enter().append("text")
+        .text(d => d.id)
+        .attr("font-size", "12px")
+        .attr("text-anchor", "middle")
+        .attr("dy", 4);
+
+      svg.on("click", () => {
+        node.classed("highlight-node", false);
+        link.classed("highlight", false);
+      });
+
+      simulation.on("tick", () => {
+        node.attr("cx", d => d.x).attr("cy", d => d.y);
+        label.attr("x", d => d.x).attr("y", d => d.y);
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+      });
+    }
+
+    window.onload = drawNetwork;
+
+    function toggleLinks(type) {
+      activeTypes[type] = !activeTypes[type];
+      d3.selectAll(`.link.${type}`).style("display", activeTypes[type] ? "inline" : "none");
+    }
+  </script>
+</body>
+</html>
